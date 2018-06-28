@@ -1,0 +1,16 @@
+{
+  "chain": {
+    "kovan": {
+      "otc": "0x8cf1cab422a0b6b554077a361f8419cdf122a9f9",
+      "otcSupportMethods": "",
+      "weth": "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
+      "dai": "0xc4375b7de8af5a38a93548eb8453a498222c4ff2"
+    },
+    "main": {
+      "otc": "0x14fbca95be7e99c15cc2996c6c9d841e54b79425",
+      "otcSupportMethods": "0x3c48840b89a24dd6f540dd2e509c0db93d3fdfad",
+      "weth": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "dai": "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359"
+    }
+  }
+}

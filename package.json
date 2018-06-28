@@ -1,0 +1,25 @@
+{
+  "name": "ui-otc-support-methods",
+  "version": "0.1.0",
+  "license": "GPL-3.0",
+  "private": true,
+  "homepage": "",
+  "dependencies": {
+    "create-react-class": "^15.5.3",
+    "import": "0.0.6",
+    "prop-types": "^15.5.8",
+    "raf": "^3.3.0",
+    "react": "^15.6.2",
+    "react-dom": "^15.6.2",
+    "web3": "^0.20.2"
+  },
+  "devDependencies": {
+    "react-scripts": "1.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+  }
+}
