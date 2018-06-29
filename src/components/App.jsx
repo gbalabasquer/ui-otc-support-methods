@@ -3,7 +3,6 @@ import web3, { initWeb3 } from  '../web3';
 
 const settings = require('../settings');
 
-const otcABI = require('../abi/otc').abi;
 const otcSupportMethodsABI = require('../abi/otcSupportMethods').abi;
 
 class App extends Component {
@@ -18,10 +17,8 @@ class App extends Component {
 
   getInitialState = () => {
     return {
-      sellOffersOrder: [],
-      sellOffers: {},
-      buyOffersOrder: [],
-      buyOffers: {}
+      sellOffers: [],
+      buyOffers: []
     };
   }
 
@@ -136,105 +133,78 @@ class App extends Component {
     return web3.eth.contract(abi).at(address);
   }
 
-  removeDuplicates = arr => {
-    let unique_array = []
-    for(let i = 0;i < arr.length; i++){
-        if(unique_array.indexOf(arr[i]) === -1){
-            unique_array.push(arr[i])
-        }
-    }
-    return unique_array
-}
-
   getOffers = (type, e, r) => {
-    const getOffer = id => {
-      return new Promise((resolve, reject) => {
-        this.otc.offers(id, (e, r) => {
-          if (!e) {
-            resolve(r);
-          } else {
-            reject(e);
-          }
-        })
-      });
-    }
-
     if (!e) {
-      const promises = [];
-      for (let i = 0; i < r.length; i++) {
-        promises.push(getOffer(r[i]));
+      const newOffers = [];
+      let arrayCompleted = true;
+      const prevOffers = [...this.state[`${type}Offers`]];
+
+      for (let i = 0; i < r.length; i = i + 5) {
+        if (r[i] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          arrayCompleted = false;
+          break;
+        }
+        if (prevOffers.length === 0 || i > 0 || prevOffers[prevOffers.length - 1].offerId !== parseInt(r[i], 16)) {
+          // Avoid inserting a duplicated offer when bringing more than 1 batch of offers
+          newOffers.push ({
+            offerId: parseInt(r[i], 16),
+            payAmt: web3.toBigNumber(r[i + 1]),
+            buyAmt: web3.toBigNumber(r[i + 2]),
+            owner: `0x${r[i + 3].slice(26, r[i + 3].length)}`,
+            date: new Date(this.valueOf(parseInt(r[i + 4], 16)) * 1000).toString()
+          });
+        }
       }
       this.setState(prevState => {
-        let offersOrder = [...prevState[`${type}OffersOrder`]];
-        offersOrder = offersOrder.concat(r.map(val => val.toNumber()));
-        prevState[`${type}OffersOrder`] = this.removeDuplicates(offersOrder);
+        let offers = [...prevState[`${type}Offers`]];
+        offers = offers.concat(newOffers);
+        prevState[`${type}Offers`] = offers;
         return prevState;
       }, () => {
-        if (this.state[`${type}OffersOrder`][this.state[`${type}OffersOrder`].length - 1]) {
-          this.otcSupportMethodsObj.getOffers['address,uint256'](this.otc.address, this.state[`${type}OffersOrder`][this.state[`${type}OffersOrder`].length - 1], (e, r) => {
+        if (arrayCompleted) {
+          this.otcSupportMethodsObj.getOffers['address,uint256'](settings.chain[this.state.network.network].otc, this.state[`${type}Offers`][this.state[`${type}Offers`].length - 1].offerId, (e, r) => {
             this.getOffers(e, r);
           });
         }
-      });
-      Promise.all(promises).then(r2 => {
-        const newOffers = {};
-        Object.keys(r2).forEach(key => {
-          newOffers[r[key]] = r2[key];
-        });
-        this.setState(prevState => {
-          let offers = [...prevState[`${type}Offers`]];
-          offers = {...offers, ...newOffers};
-          prevState[`${type}Offers`] = offers;
-          return prevState;
-        });
       });
     }
   }
 
   initContracts = () => {
-    this.otc = this.loadObject(otcABI, settings.chain[this.state.network.network].otc);
     this.otcSupportMethodsObj = this.loadObject(otcSupportMethodsABI, settings.chain[this.state.network.network].otcSupportMethods);
     
-    this.otcSupportMethodsObj.getOffers['address,address,address'](this.otc.address, settings.chain[this.state.network.network].weth, settings.chain[this.state.network.network].dai, (e, r) => {
+    this.otcSupportMethodsObj.getOffers['address,address,address'](settings.chain[this.state.network.network].otc, settings.chain[this.state.network.network].weth, settings.chain[this.state.network.network].dai, (e, r) => {
       this.getOffers('sell', e, r);
     });
-    this.otcSupportMethodsObj.getOffers['address,address,address'](this.otc.address, settings.chain[this.state.network.network].dai, settings.chain[this.state.network.network].weth, (e, r) => {
+    this.otcSupportMethodsObj.getOffers['address,address,address'](settings.chain[this.state.network.network].otc, settings.chain[this.state.network.network].dai, settings.chain[this.state.network.network].weth, (e, r) => {
       this.getOffers('buy', e, r);
     });
   }
 
   valueOf = number => {
-    return number ? number.valueOf() : 0;
+    return number ? web3.fromWei(number).valueOf() : 0;
   } 
 
   render() {
     return (
       <div>
         <div style={ {width: '50%', float: 'left'} }>
-          <h2>Buy DAI Orders</h2>
+          <h2>Buy DAI Orders ({ this.state.buyOffers.length })</h2>
           {
-            Object.keys(this.state.buyOffers).length > 0 &&
-            this.state.buyOffersOrder.map(offerId =>
-              {
-                return this.state.buyOffers[offerId] &&
-                <div key={ offerId } style={ {marginBottom: '10px', border: '1px solid'} }>
-                  { offerId } - { this.valueOf(this.state.buyOffers[offerId][0]) } - { this.state.buyOffers[offerId][1] } - { this.valueOf(this.state.buyOffers[offerId][2]) } - { this.state.buyOffers[offerId][3] } - { this.state.buyOffers[offerId][4] } - { (new Date(this.valueOf(this.state.buyOffers[offerId][5]) * 1000).toString()) }
-                </div>
-              }
+            this.state.buyOffers.map(offer =>
+              <div key={ offer.offerId } style={ {marginBottom: '10px', border: '1px solid'} }>
+                { offer.offerId } - { this.valueOf(offer.payAmt) } - { this.valueOf(offer.buyAmt) } - { offer.owner } - { offer.date }
+              </div>
             )
           }
         </div>
         <div style={ {width: '50%', float: 'right'} }>
-          <h2>Sell DAI Orders</h2>
+          <h2>Sell DAI Orders ({ this.state.sellOffers.length })</h2>
           {
-            Object.keys(this.state.sellOffers).length > 0 &&
-            this.state.sellOffersOrder.map(offerId =>
-              {
-                return this.state.sellOffers[offerId] &&
-                <div key={ offerId } style={ {marginBottom: '10px', border: '1px solid'} }>
-                  { offerId } - { this.valueOf(this.state.sellOffers[offerId][0]) } - { this.valueOf(this.state.sellOffers[offerId][2]) } - { this.state.sellOffers[offerId][4] } - { (new Date(this.valueOf(this.state.sellOffers[offerId][5]) * 1000).toString()) }
-                </div>
-              }
+            this.state.sellOffers.map(offer =>
+              <div key={ offer.offerId } style={ {marginBottom: '10px', border: '1px solid'} }>
+                { offer.offerId } - { this.valueOf(offer.payAmt) } - { this.valueOf(offer.buyAmt) } - { offer.owner } - { offer.date }
+              </div>
             )
           }
         </div>
