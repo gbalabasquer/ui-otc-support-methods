@@ -151,7 +151,7 @@ class App extends Component {
             payAmt: web3.toBigNumber(r[i + 1]),
             buyAmt: web3.toBigNumber(r[i + 2]),
             owner: `0x${r[i + 3].slice(26, r[i + 3].length)}`,
-            date: new Date(this.valueOf(parseInt(r[i + 4], 16)) * 1000).toString()
+            date: new Date(parseInt(r[i + 4], 16) * 1000).toString()
           });
         }
       }
