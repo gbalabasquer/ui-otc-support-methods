@@ -139,19 +139,20 @@ class App extends Component {
       let arrayCompleted = true;
       const prevOffers = [...this.state[`${type}Offers`]];
 
-      for (let i = 0; i < r.length; i = i + 5) {
-        if (r[i] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      for (let i = 0; i < r[0].length; i++) {
+        const offerId = r[0][i].toNumber();
+        if (offerId === 0) {
           arrayCompleted = false;
           break;
         }
-        if (prevOffers.length === 0 || i > 0 || prevOffers[prevOffers.length - 1].offerId !== parseInt(r[i], 16)) {
+        if (prevOffers.length === 0 || i > 0 || prevOffers[prevOffers.length - 1].offerId !== offerId) {
           // Avoid inserting a duplicated offer when bringing more than 1 batch of offers
           newOffers.push ({
-            offerId: parseInt(r[i], 16),
-            payAmt: web3.toBigNumber(r[i + 1]),
-            buyAmt: web3.toBigNumber(r[i + 2]),
-            owner: `0x${r[i + 3].slice(26, r[i + 3].length)}`,
-            date: new Date(parseInt(r[i + 4], 16) * 1000).toString()
+            offerId,
+            payAmt: r[1][i],
+            buyAmt: r[2][i],
+            owner: r[3][i],
+            date: (new Date(r[4][i].times(1000).toNumber())).toString()
           });
         }
       }
